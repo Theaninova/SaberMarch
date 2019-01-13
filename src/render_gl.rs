@@ -2,21 +2,6 @@ use gl;
 use std;
 use std::ffi::{CString, CStr};
 
-fn someFunction() {
-    let vert_shader = Shader::from_vert_source(..)?;
-    let frag_shader = Shader::from_frag_source(..)?;
-
-    let program_id = unsafe { gl::CreateProgram() };
-
-    unsafe {
-        gl::AttachShader(program_id, vert_shader.id());
-        gl::AttachShader(program_id, frag_shader.id());
-        gl::LinkProgram(program_id);
-        gl::DetachShader(program_id, vert_shader.id());
-        gl::DetachShader(program_id, frag_shader.id());
-    }
-}
-
 pub struct Program {
     id: gl::types::GLunit,
 }
