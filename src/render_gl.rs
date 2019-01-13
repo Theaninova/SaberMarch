@@ -3,7 +3,7 @@ use std;
 use std::ffi::{CString, CStr};
 
 pub struct Program {
-    id: gl::types::GLunit,
+    id: gl::types::GLuint,
 }
 
 impl Program {
@@ -23,7 +23,7 @@ impl Program {
         Ok(Program { id: program_id })
     }
 
-    pub fn id(&self) -> gl::types::GLunit {
+    pub fn id(&self) -> gl::types::GLuint {
         self.id
     }
 
@@ -59,7 +59,7 @@ impl Shader {
         Shader::from_source(source, gl::FRAGMENT_SHADER)
     }
 
-    pub fn id(&self) -> gl::types::GLunit {
+    pub fn id(&self) -> gl::types::GLuint {
         self.id
     }
 }

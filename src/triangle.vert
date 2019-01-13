@@ -1,7 +1,8 @@
 #version 330 core
 
-out vec4 Color;
+layout (location = 0) in vec3 Position;
 
-void main() {
-	Color = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+void main()
+{
+    gl_Position = vec4(Position, 1.0);
 }
