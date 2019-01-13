@@ -1,7 +1,8 @@
 [package]
-name = "SaberMarch"
+name = "saber_march"
 version = "0.1.0"
 authors = ["BuildTools <unconfigured@null.spigotmc.org>"]
 edition = "2018"
 
 [dependencies]
+sdl2 = "0.32.1"
