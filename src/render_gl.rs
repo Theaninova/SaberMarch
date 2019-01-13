@@ -2,6 +2,38 @@ use gl;
 use std;
 use std::ffi::{CString, CStr};
 
+pub struct Program {
+    id: gl::types::GLunit,
+}
+
+impl Program {
+    pub fn from_shaders(shaders: &[Shader]) -> Result<Program, String> {
+        let program_id = unsafe { gl::CreateProgram() };
+
+        for shader in shaders {
+            unsafe { gl::AttachShader(program_id, shader.id()); }
+        }
+
+        unsafe { gl::LinkProgram(program_id); }
+
+        for shader in shaders {
+            unsafe { gl::DetachShader(program_id, shader.id()); }
+        }
+
+        Ok(Program { id: program_id })
+    }
+
+    pub fn id(&self) -> gl::types::GLunit {
+        self.id
+    }
+}
+
+impl Drop for Program {
+    fn drop(&mut self) {
+        unsafe { gl::DeleteProgram(self.id); }
+    }
+}
+
 pub struct Shader {
     id: gl::types::GLuint,
 }
@@ -21,6 +53,10 @@ impl Shader {
 
     pub fn from_frag_source(source: &CStr) -> Result<Shader, String> {
         Shader::from_source(source, gl::FRAGMENT_SHADER)
+    }
+
+    pub fn id(&self) -> gl::types::GLunit {
+        self.id
     }
 }
 
