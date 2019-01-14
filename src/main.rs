@@ -1,6 +1,8 @@
 extern crate gl;
 extern crate sdl2;
 
+use std::time::Instant;
+
 pub mod render_gl;
 
 fn main() {
@@ -31,9 +33,13 @@ fn main() {
         gl::GenVertexArrays(1, &mut empty_vao);
     }
 
+    let last_time = Instant::now();
+
     // main loop
     let mut event_pump = sdl.event_pump().unwrap();
     'main: loop {
+        let elapsed = last_time.elapsed();
+
         for event in event_pump.poll_iter() {
             match event {
                 sdl2::event::Event::Quit { .. } => break 'main,
@@ -49,9 +55,9 @@ fn main() {
 
         shader_program.set_used();
         unsafe {
-            gl::Uniform2f(2, 900.0, 700.0);
-            gl::Uniform3f(3, 0.0, 0.0, 0.0);
-            gl::Uniform1f(4, 0.0);
+            gl::Uniform2f(2, 900.0, 700.0); //Screen Resolution
+            gl::Uniform3f(3, 0.0, 0.0, 0.0); //Camera Position
+            gl::Uniform1f(4, elapsed.as_secs() as f32 + (elapsed.subsec_millis() as f32 / 1_000f32)); //Time
 
             gl::BindVertexArray(empty_vao);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
