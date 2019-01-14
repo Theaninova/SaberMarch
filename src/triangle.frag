@@ -1,10 +1,10 @@
-#version 410 core
+#version 430 core
 
 out vec4 Color;
 
-uniform vec3 cam_pos;
-uniform float time;
-uniform vec2 resolution;
+layout(location = 2) uniform vec2 resolution;
+layout(location = 3) uniform vec3 cam_pos;
+layout(location = 4) uniform float time;
 
 const int MAX_MARCHING_STEPS = 255;
 const float MIN_DIST = 0.0;
@@ -12,7 +12,7 @@ const float MAX_DIST = 100.0;
 const float EPSILON = 0.0001;
 
 float sphereSDF(vec3 samplePoint) {
-    return length(samplePoint) - 5.1;
+    return length(samplePoint) - 1.0;
 }
 
 float sceneSDF(vec3 samplePoint) {
@@ -43,8 +43,8 @@ vec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {
 
 void main()
 {
-	vec3 dir = rayDirection(45.0, resolution, gl_FragCoord.xy);
-    vec3 eye = vec3(0.0, 0.0, 10.0);
+	vec3 dir = rayDirection(45.0, resolution/*vec2(900, 700)*/, gl_FragCoord.xy);
+    vec3 eye = vec3(0.0, 0.0, 5.0);
     float dist = shortestDistanceToSurface(eye, dir, MIN_DIST, MAX_DIST);
 
     if (dist > MAX_DIST - EPSILON) {

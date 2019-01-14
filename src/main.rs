@@ -12,82 +12,26 @@ fn main() {
     gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
     gl_attr.set_context_version(4, 1);
 
-    let window = video_subsystem
-        .window("Game", 900, 700)
-        .opengl()
-        .resizable()
-        .build()
-        .unwrap();
+    let window = video_subsystem.window("Game", 900, 700).opengl().resizable().build().unwrap();
 
     let _gl_context = window.gl_create_context().unwrap();
-    let _gl =
-        gl::load_with(|s| video_subsystem.gl_get_proc_address(s) as *const std::os::raw::c_void);
+    let _gl = gl::load_with(|s| video_subsystem.gl_get_proc_address(s) as *const std::os::raw::c_void);
 
     // set up shader program
-
     use std::ffi::CString;
-    let vert_shader =
-        render_gl::Shader::from_vert_source(&CString::new(include_str!("triangle.vert")).unwrap())
-            .unwrap();
-
-    let frag_shader =
-        render_gl::Shader::from_frag_source(&CString::new(include_str!("triangle.frag")).unwrap())
-            .unwrap();
-
+    let vert_shader = render_gl::Shader::from_vert_source(&CString::new(include_str!("triangle.vert")).unwrap()).unwrap();
+    let frag_shader = render_gl::Shader::from_frag_source(&CString::new(include_str!("triangle.frag")).unwrap()).unwrap();
     let shader_program = render_gl::Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
 
-    // set up vertex buffer object
-
-    let vertices: Vec<f32> = vec![-0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.0, 0.5, 0.0];
-
-    let mut vbo: gl::types::GLuint = 0;
-    unsafe {
-        gl::GenBuffers(1, &mut vbo);
-    }
-
-    unsafe {
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        gl::BufferData(
-            gl::ARRAY_BUFFER,                                                       // target
-            (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, // size of data in bytes
-            vertices.as_ptr() as *const gl::types::GLvoid, // pointer to data
-            gl::STATIC_DRAW,                               // usage
-        );
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-    }
-
-    // set up vertex array object
-
-    let mut vao: gl::types::GLuint = 0;
-    unsafe {
-        gl::GenVertexArrays(1, &mut vao);
-    }
-
-    unsafe {
-        gl::BindVertexArray(vao);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        gl::EnableVertexAttribArray(0); // this is "layout (location = 0)" in vertex shader
-        gl::VertexAttribPointer(
-            0,         // index of the generic vertex attribute ("layout (location = 0)")
-            3,         // the number of components per generic vertex attribute
-            gl::FLOAT, // data type
-            gl::FALSE, // normalized (int-to-float conversion)
-            (3 * std::mem::size_of::<f32>()) as gl::types::GLint, // stride (byte offset between consecutive attributes)
-            std::ptr::null(),                                     // offset of the first component
-        );
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-        gl::BindVertexArray(0);
-    }
-
-    // set up shared state for window
-
+    let mut empty_vao: gl::types::GLuint = 0;
     unsafe {
         gl::Viewport(0, 0, 900, 700);
         gl::ClearColor(0.3, 0.3, 0.5, 1.0);
+
+        gl::GenVertexArrays(1, &mut empty_vao);
     }
 
     // main loop
-
     let mut event_pump = sdl.event_pump().unwrap();
     'main: loop {
         for event in event_pump.poll_iter() {
@@ -105,25 +49,13 @@ fn main() {
 
         shader_program.set_used();
         unsafe {
-            let resolution_location = gl::GetUniformLocation(shader_program.id(), "resolution".as_ptr() as *const gl::types::GLchar);
-            let cam_pos_location = gl::GetUniformLocation(shader_program.id(), "cam_pos".as_ptr() as *const gl::types::GLchar);
-            let time_location = gl::GetUniformLocation(shader_program.id(), "time".as_ptr() as *const gl::types::GLchar);
-            gl::Uniform2f(resolution_location, 900.0, 700.0);
-            gl::Uniform3f(cam_pos_location, 0.0, 0.0, 0.0);
-            gl::Uniform1f(time_location, 0.0);
+            gl::Uniform2f(2, 900.0, 700.0);
+            gl::Uniform3f(3, 0.0, 0.0, 0.0);
+            gl::Uniform1f(4, 0.0);
 
-            //gl::DrawArrays(gl::POINTS, 0, 1);
-            //gl::BindVertexArray(vao);
-            let empty_vao: gl::types::GLuint = 0;
-            gl::BindVertexArray(vao);
+            gl::BindVertexArray(empty_vao);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
-            //gl::DrawArrays(
-            //    gl::TRIANGLES, // mode
-            //    0,             // starting index in the enabled arrays
-            //    4,             // number of indices to be rendered
-            //);
         }
-
         window.gl_swap_window();
     }
 }
