@@ -105,12 +105,23 @@ fn main() {
 
         shader_program.set_used();
         unsafe {
+            let resolution_location = gl::GetUniformLocation(shader_program.id(), "resolution".as_ptr() as *const gl::types::GLchar);
+            let cam_pos_location = gl::GetUniformLocation(shader_program.id(), "cam_pos".as_ptr() as *const gl::types::GLchar);
+            let time_location = gl::GetUniformLocation(shader_program.id(), "time".as_ptr() as *const gl::types::GLchar);
+            gl::Uniform2f(resolution_location, 900.0, 700.0);
+            gl::Uniform3f(cam_pos_location, 0.0, 0.0, 0.0);
+            gl::Uniform1f(time_location, 0.0);
+
+            //gl::DrawArrays(gl::POINTS, 0, 1);
+            //gl::BindVertexArray(vao);
+            let empty_vao: gl::types::GLuint = 0;
             gl::BindVertexArray(vao);
-            gl::DrawArrays(
-                gl::TRIANGLES, // mode
-                0,             // starting index in the enabled arrays
-                3,             // number of indices to be rendered
-            );
+            gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            //gl::DrawArrays(
+            //    gl::TRIANGLES, // mode
+            //    0,             // starting index in the enabled arrays
+            //    4,             // number of indices to be rendered
+            //);
         }
 
         window.gl_swap_window();
