@@ -5,7 +5,7 @@ layout(location = 0) out vec3 Color;
 layout(location = 2) uniform vec2 resolution;
 layout(location = 3) uniform vec3 cam_pos;
 layout(location = 4) uniform float time;
-layout(location = 5) uniform mat4 proj_matrix;
+layout(location = 5) uniform float eye_x;
 
 const int MAX_MARCHING_STEPS = 255;
 const float MIN_DIST = 0.0;
@@ -315,8 +315,8 @@ vec3 phongIllumination(vec3 k_a, vec3 k_d, vec3 k_s, float alpha, vec3 p, vec3 e
 void main()
 {
 	vec3 dir = rayDirection(45.0, resolution/*vec2(900, 700)*/, gl_FragCoord.xy);
-    vec3 eye = proj_matrix[2].xyz;
-    vec3 worldDir = (proj_matrix * vec4(1, 1, 1, 0)).xyz;
+    vec3 eye = vec3(eye_x, 0, 10.0);
+    //vec3 worldDir = (proj_matrix * vec4(1, 1, 1, 0)).xyz;
 
     float dist = shortestDistanceToSurface(eye, dir, MIN_DIST, MAX_DIST);
 

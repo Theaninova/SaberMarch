@@ -32,6 +32,8 @@ fn main() {
         }
     };
 
+    println!("Left Eye Matrix: {:?}", system.eye_to_head_transform(openvr::Eye::Left));
+    println!("Left Eye Matrix: {:?}", system.eye_to_head_transform(openvr::Eye::Right));
     println!("\tRecommended size: {:?}", system.recommended_render_target_size());
     println!("\tVsync: {:?}", system.time_since_last_vsync());
 
@@ -158,8 +160,8 @@ fn main() {
             gl::Uniform3f(3, 0.0, 0.0, 0.0); //Camera Position
             gl::Uniform1f(4, elapsed.as_secs() as f32 + (elapsed.subsec_millis() as f32 / 1_000f32)); //Time
 
-            let eye_pos: [[f32; 4]; 4] = f_4x3to4x4(system.eye_to_head_transform(openvr::Eye::Right));
-            gl::UniformMatrix4fv(5, 1, false as u8, eye_pos.as_ptr() as *const f32);
+            let eye_pos: f32 = (system.eye_to_head_transform(openvr::Eye::Left))[0][3];
+            gl::Uniform1f(5, eye_pos);
 
             gl::BindVertexArray(empty_vao);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
@@ -175,8 +177,8 @@ fn main() {
             gl::Uniform3f(3, 0.0, 0.0, 0.0); //Camera Position
             gl::Uniform1f(4, elapsed.as_secs() as f32 + (elapsed.subsec_millis() as f32 / 1_000f32)); //Time
 
-            let eye_pos: [[f32; 4]; 4] = f_4x3to4x4(system.eye_to_head_transform(openvr::Eye::Left));
-            gl::UniformMatrix4fv(5, 1, false as u8, eye_pos.as_ptr() as *const f32);
+            let eye_pos: f32 = (system.eye_to_head_transform(openvr::Eye::Right))[0][3];
+            gl::Uniform1f(5, eye_pos);
 
             gl::BindVertexArray(empty_vao);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
