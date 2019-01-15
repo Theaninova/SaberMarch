@@ -1,6 +1,6 @@
 #version 430 core
 
-out vec4 Color;
+layout(location = 0) out vec3 Color;
 
 layout(location = 2) uniform vec2 resolution;
 layout(location = 3) uniform vec3 cam_pos;
@@ -319,7 +319,7 @@ void main()
 
     if (dist > MAX_DIST - EPSILON) {
         // Didn't hit anything
-        Color = vec4(0.0, 0.0, 0.0, 0.0);
+        Color = vec3(0.0, 0.0, 0.0);
 		return;
     }
 
@@ -331,7 +331,5 @@ void main()
     vec3 K_s = vec3(1.0, 1.0, 1.0);
     float shininess = 10.0;
 
-    vec3 color = phongIllumination(K_a, K_d, K_s, shininess, p, eye);
-
-    Color = vec4(color, 1.0);
+    Color = phongIllumination(K_a, K_d, K_s, shininess, p, eye);
 }
