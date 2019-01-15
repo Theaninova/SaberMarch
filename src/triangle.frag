@@ -19,7 +19,10 @@ float dot2_2(vec2 v) {
 }
 
 //SDFs
-
+// http://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
+// The MIT License
+// Copyright © 2018 Inigo Quilez
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 float sphereSDF(vec3 p, float radius) {
     return length(p) - radius;
 }
@@ -136,13 +139,87 @@ float quadSDF(vec3 p, vec3 a, vec3 b, vec3 c, vec3 d) {
      :
      dot(nor,pa)*dot(nor,pa)/dot2_3(nor) );
 }
-
-//-----------------------
-//     END OF SDFs      |
-//-----------------------
+//Operators
+/*vec4 opElongate(vec3 p, vec3 h) {
+    //Not sure how to implement this
+    //return vec4( p-clamp(p,-h,h), 0.0 ); // faster, but produces zero in the interior elongated box
+    vec3 q = abs(p)-h;
+    return vec4(min(max(q.x, max(q.y, q.z)), 0.0), max(q, 0.0));
+}*/
+vec4 opRound(vec3 p, float r) {
+    return vec4(p, r);
+}
+float opOnion(float sdf_result, float thickness) {
+    return abs(sdf_result) - thickness;
+}
+/*Maby latervec4 opExtrude(vec3 sdf_result, vec3 p, float h) {
+    vec2 w = vec2(sdf_result, abs(p.z) - h);
+  	return min(max(w.x,w.y),0.0) + length(max(w,0.0));
+}
+vec3 opRevolve(vec3 )*/
+//Booleans
+float opUnion(float d1, float d2) {
+    return min(d1, d2);
+}
+float opSubtract(float d1, float d2) {
+    return max(-d1, d2);
+}
+float opIntersect(float d1, float d2) {
+    return max(d1, d2);
+}
+float opSmoothUnion(float d1, float d2, float k) {
+    float h = clamp( 0.5 + 0.5*(d2-d1)/k, 0.0, 1.0 );
+    return mix( d2, d1, h ) - k*h*(1.0-h);
+}
+float opSmoothSubtract(float d1, float d2, float k) {
+    float h = clamp( 0.5 - 0.5*(d2+d1)/k, 0.0, 1.0 );
+    return mix( d2, -d1, h ) + k*h*(1.0-h);
+}
+float opSmoothIntersect(float d1, float d2, float k) {
+    float h = clamp( 0.5 - 0.5*(d2-d1)/k, 0.0, 1.0 );
+    return mix( d2, d1, h ) + k*h*(1.0-h);
+}
+//Translations
+vec3 translate(vec3 t, vec3 p) {
+    return vec3(p.x + t.x,
+                p.y + t.y,
+                p.z + t.z);
+}
+vec3 rotateX(float t, vec3 p) {
+    return vec3(p.x,
+                cos(t)*p.y - sin(t)*p.z,
+                sin(t)*p.y + cos(t)*p.z);
+}
+vec3 rotateY(float t, vec3 p) {
+    return vec3(cos(t)*p.x + sin(t)*p.z,
+                p.y,
+                -sin(t)*p.x + cos(t)*p.z);
+}
+vec3 rotateZ(float t, vec3 p) {
+    return vec3(cos(t)*p.x - sin(t)*p.y,
+                sin(t)*p.x + cos(t)*p.y,
+                p.z);
+}
+//Symmetry
+vec3 symX(vec3 p) {
+    p.x = abs(p.x);
+    return p;
+}
+vec3 symY(vec3 p) {
+    p.y = abs(p.y);
+    return p;
+}
+vec3 symZ(vec3 p) {
+    p.z = abs(p.z);
+    return p;
+}
+//Patterns
+vec3 patInfinite(vec3 p, vec3 o) {
+    return mod(p, o) - 0.5*o;
+}
 
 float sceneSDF(vec3 p) {
-    return ellipsoidSDF(p, vec3(1.0, 0.5, 0.5));
+    return boxSDF(translate(vec3(sin(time), 0.0, 0.0), rotateZ(sin(time), p)), vec3(1.0, 0.5, 0.5));
 }
 
 vec3 estimateNormal(vec3 p) {
