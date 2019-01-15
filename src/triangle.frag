@@ -11,12 +11,138 @@ const float MIN_DIST = 0.0;
 const float MAX_DIST = 100.0;
 const float EPSILON = 0.0001;
 
-float sphereSDF(vec3 samplePoint) {
-    return length(samplePoint) - 1.0;
+float dot2_3(vec3 v) {
+    return dot(v,v);
+}
+float dot2_2(vec2 v) {
+    return dot(v,v);
 }
 
-float sceneSDF(vec3 samplePoint) {
-    return sphereSDF(samplePoint);
+//SDFs
+
+float sphereSDF(vec3 p, float radius) {
+    return length(p) - radius;
+}
+float boxSDF(vec3 p, vec3 s) {
+    vec3 d = abs(p) - s;
+    return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0);
+}
+float roundBoxSDF(vec3 p, vec3 s, float radius) {
+    return boxSDF(p, s) - radius;
+}
+float torusSDF(vec3 p, vec2 s) {
+    return length(vec2(length(p.xz) - s.x, p.y)) - s.y;
+}
+float cylinderSDF(vec3 p, vec3 s) {
+    return length(p.xz - s.xy) - s.z;
+}
+float coneSDF(vec3 p, vec2 s) {
+    return dot(s, vec2(length(p.xy), p.z));
+}
+float planeSDF(vec3 p, vec4 s_n) {
+    return dot(p, s_n.xyz) + s_n.w;
+}
+float hexPrismSDF(vec3 p, vec2 s) {
+    const vec3 k = vec3(-0.8660254, 0.5, 0.57735);
+    p = abs(p);
+    p.xy -= 2.0*min(dot(k.xy, p.xy), 0.0)*k.xy;
+    vec2 d = vec2(length(p.xy - vec2(clamp(p.x, -k.z * s.x, k.z * s.x), s.x)) * sign(p.y - s.x), p.z - s.y);
+    return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
+}
+float triPrismSDF(vec3 p, vec2 s) {
+    vec3 q = abs(p);
+    return max(q.z - s.y, max(q.x * 0.866025 + p.y * 0.5, -p.y) - s.x * 0.5);
+}
+float capsuleSDF(vec3 p, vec3 p_a, vec3 p_b, float r) {
+    vec3 pa = p - p_a, ba = p_b - p_a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h) - r;
+}
+float verticalCapsuleSDF(vec3 p, float s, float r) {
+    p.y -= clamp(p.y, 0.0, s);
+    return length(p) - r;
+}
+float cylinderSDF(vec3 p, vec2 s) {
+    vec2 d = abs(vec2(length(p.xz), p.y)) - s;
+    return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
+}
+float roundedCylinder(vec3 p, float r_a, float r_b, float s) {
+    vec2 d = vec2(length(p.xz) - 2.0 * r_a + r_b, abs(p.y) - s);
+    return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - r_b;
+}
+float coneSDF(vec3 p, float s, float r1, float r2) {
+    vec2 q = vec2(length(p.xz), p.y );
+
+    vec2 k1 = vec2(r2, s);
+    vec2 k2 = vec2(r2 - r1, 2.0 * s);
+    vec2 ca = vec2(q.x - min(q.x, (q.y < 0.0)?r1:r2), abs(q.y) - s);
+    vec2 cb = q - k1 + k2 * clamp(dot(k1 - q, k2) / dot2_2(k2), 0.0, 1.0);
+    float s2 = (cb.x < 0.0 && ca.y < 0.0) ? -1.0 : 1.0;
+    return s2*sqrt( min(dot2_2(ca),dot2_2(cb)) );
+}
+float roundedConeSDF(vec3 p, float s, float r1, float r2) {
+    vec2 q = vec2( length(p.xz), p.y );
+
+    float b = (r1 - r2) / s;
+    float a = sqrt(1.0 - b * b);
+    float k = dot(q, vec2(-b, a));
+
+    if(k < 0.0)   return length(q) - r1;
+    if(k > a * s) return length(q - vec2(0.0, s)) - r2;
+
+    return dot(q, vec2(a,b) ) - r1;
+}
+float ellipsoidSDF(vec3 p, vec3 r) {
+    float k0 = length(p / r);
+    float k1 = length(p / (r * r));
+    return k0*(k0 - 1.0) / k1;
+}
+float triSDF(vec3 p, vec3 a, vec3 b, vec3 c) {
+    vec3 ba = b - a; vec3 pa = p - a;
+    vec3 cb = c - b; vec3 pb = p - b;
+    vec3 ac = a - c; vec3 pc = p - c;
+    vec3 nor = cross( ba, ac );
+
+    return sqrt(
+    (sign(dot(cross(ba,nor),pa)) +
+     sign(dot(cross(cb,nor),pb)) +
+     sign(dot(cross(ac,nor),pc))<2.0)
+     ?
+     min( min(
+     dot2_3(ba*clamp(dot(ba,pa)/dot2_3(ba),0.0,1.0)-pa),
+     dot2_3(cb*clamp(dot(cb,pb)/dot2_3(cb),0.0,1.0)-pb) ),
+     dot2_3(ac*clamp(dot(ac,pc)/dot2_3(ac),0.0,1.0)-pc) )
+     :
+     dot(nor,pa)*dot(nor,pa)/dot2_3(nor) );
+}
+float quadSDF(vec3 p, vec3 a, vec3 b, vec3 c, vec3 d) {
+    vec3 ba = b - a; vec3 pa = p - a;
+    vec3 cb = c - b; vec3 pb = p - b;
+    vec3 dc = d - c; vec3 pc = p - c;
+    vec3 ad = a - d; vec3 pd = p - d;
+    vec3 nor = cross( ba, ad );
+
+    return sqrt(
+    (sign(dot(cross(ba,nor),pa)) +
+     sign(dot(cross(cb,nor),pb)) +
+     sign(dot(cross(dc,nor),pc)) +
+     sign(dot(cross(ad,nor),pd))<3.0)
+     ?
+     min( min( min(
+     dot2_3(ba*clamp(dot(ba,pa)/dot2_3(ba),0.0,1.0)-pa),
+     dot2_3(cb*clamp(dot(cb,pb)/dot2_3(cb),0.0,1.0)-pb) ),
+     dot2_3(dc*clamp(dot(dc,pc)/dot2_3(dc),0.0,1.0)-pc) ),
+     dot2_3(ad*clamp(dot(ad,pd)/dot2_3(ad),0.0,1.0)-pd) )
+     :
+     dot(nor,pa)*dot(nor,pa)/dot2_3(nor) );
+}
+
+//-----------------------
+//     END OF SDFs      |
+//-----------------------
+
+float sceneSDF(vec3 p) {
+    return ellipsoidSDF(p, vec3(1.0, 0.5, 0.5));
 }
 
 vec3 estimateNormal(vec3 p) {
@@ -42,9 +168,9 @@ float shortestDistanceToSurface(vec3 eye, vec3 marchingDirection, float start, f
     return end;
 }
 
-vec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {
-    vec2 xy = fragCoord - size / 2.0;
-    float z = size.y / tan(radians(fieldOfView) / 2.0);
+vec3 rayDirection(float fieldOfView, vec2 s, vec2 fragCoord) {
+    vec2 xy = fragCoord - s / 2.0;
+    float z = s.y / tan(radians(fieldOfView) / 2.0);
     return normalize(vec3(xy, -z));
 }
 
