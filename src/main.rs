@@ -32,13 +32,8 @@ fn main() {
         }
     };
 
-    //for
-
     println!("\tRecommended size: {:?}", system.recommended_render_target_size());
     println!("\tVsync: {:?}", system.time_since_last_vsync());
-
-
-
 
     let sdl = sdl2::init().unwrap();
     let video_subsystem = sdl.video().unwrap();
@@ -48,7 +43,7 @@ fn main() {
     gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
     gl_attr.set_context_version(4, 1);
 
-    let window = video_subsystem.window("OpenSabers", 900, 700).opengl().resizable().build().unwrap();
+    let window = video_subsystem.window("OpenSabers", 1024, 768).opengl().resizable().build().unwrap();
 
     let _gl_context = window.gl_create_context().unwrap();
     let _gl = gl::load_with(|s| video_subsystem.gl_get_proc_address(s) as *const std::os::raw::c_void);
@@ -62,33 +57,57 @@ fn main() {
 
 
     //VR specific Stuff with OpenGL
-    let mut framebuffer_name: gl::types::GLuint = 0;
-    let mut rendered_texture: gl::types::GLuint = 0;
+    let mut framebuffer_name_right_eye: gl::types::GLuint = 0;
+    let mut rendered_texture_right_eye: gl::types::GLuint = 0;
+
+    let mut framebuffer_name_left_eye: gl::types::GLuint = 0;
+    let mut rendered_texture_left_eye: gl::types::GLuint = 0;
     unsafe {
-        gl::GenFramebuffers(1, &mut framebuffer_name);
-        gl::BindFramebuffer(gl::FRAMEBUFFER, framebuffer_name);
+        //Right Eye
+        gl::GenFramebuffers(1, &mut framebuffer_name_right_eye);
+        gl::BindFramebuffer(gl::FRAMEBUFFER, framebuffer_name_right_eye);
+        gl::GenTextures(1, &mut rendered_texture_right_eye);
 
-        gl::GenTextures(1, &mut rendered_texture);
-
-        gl::BindTexture(gl::TEXTURE_2D, rendered_texture);
-        gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB as i32, system.recommended_render_target_size().0 as i32, 2i32*system.recommended_render_target_size().1 as i32, 0, gl::RGB, gl::UNSIGNED_BYTE, 0 as *const std::ffi::c_void);
+        gl::BindTexture(gl::TEXTURE_2D, rendered_texture_right_eye);
+        gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB as i32, system.recommended_render_target_size().0 as i32, system.recommended_render_target_size().1 as i32, 0, gl::RGB, gl::UNSIGNED_BYTE, 0 as *const std::ffi::c_void);
 
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
 
-        gl::FramebufferTexture(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0, rendered_texture, 0);
+        gl::FramebufferTexture(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0, rendered_texture_right_eye, 0);
+
+        let draw_buffers: [gl::types::GLenum; 1] = [gl::COLOR_ATTACHMENT0];
+        gl::DrawBuffers(1, draw_buffers.as_ptr());
+
+        //Left Eye
+        gl::GenFramebuffers(1, &mut framebuffer_name_left_eye);
+        gl::BindFramebuffer(gl::FRAMEBUFFER, framebuffer_name_left_eye);
+        gl::GenTextures(1, &mut rendered_texture_left_eye);
+
+        gl::BindTexture(gl::TEXTURE_2D, rendered_texture_left_eye);
+        gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB as i32, system.recommended_render_target_size().0 as i32, system.recommended_render_target_size().1 as i32, 0, gl::RGB, gl::UNSIGNED_BYTE, 0 as *const std::ffi::c_void);
+
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
+
+        gl::FramebufferTexture(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0, rendered_texture_left_eye, 0);
 
         let draw_buffers: [gl::types::GLenum; 1] = [gl::COLOR_ATTACHMENT0];
         gl::DrawBuffers(1, draw_buffers.as_ptr());
     }
-
-
-
+    let tex_right_eye: openvr::compositor::Texture = openvr::compositor::Texture {
+        handle: openvr::compositor::texture::Handle::OpenGLTexture(rendered_texture_right_eye as usize),
+        color_space: openvr::compositor::texture::ColorSpace::Auto
+    };
+    let tex_left_eye: openvr::compositor::Texture = openvr::compositor::Texture {
+        handle: openvr::compositor::texture::Handle::OpenGLTexture(rendered_texture_left_eye as usize),
+        color_space: openvr::compositor::texture::ColorSpace::Auto
+    };
 
     let mut empty_vao: gl::types::GLuint = 0;
     unsafe {
-        gl::BindFramebuffer(gl::FRAMEBUFFER, framebuffer_name);
-        gl::Viewport(0, 0, system.recommended_render_target_size().0 as i32, 2i32*system.recommended_render_target_size().1 as i32);
+        gl::BindFramebuffer(gl::FRAMEBUFFER, framebuffer_name_right_eye);
+        gl::Viewport(0, 0, system.recommended_render_target_size().0 as i32, system.recommended_render_target_size().1 as i32);
         gl::ClearColor(0.3, 0.3, 0.5, 1.0);
 
         gl::GenVertexArrays(1, &mut empty_vao);
@@ -119,11 +138,7 @@ fn main() {
             }
         }
 
-        //system.device
         let pos = system.device_to_absolute_tracking_pose(openvr::TrackingUniverseOrigin::RawAndUncalibrated, 0.0);
-        /*for pose in poses.iter() {
-            //Do something
-        }*/
 
         loop {
             match system.poll_next_event_with_pose(openvr::TrackingUniverseOrigin::RawAndUncalibrated) {
@@ -134,36 +149,49 @@ fn main() {
 
 
         unsafe {
+            gl::BindFramebuffer(gl::FRAMEBUFFER, framebuffer_name_left_eye);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
-
-        // draw triangle
-
         shader_program.set_used();
         unsafe {
-            gl::Uniform2f(2, 900.0, 700.0); //Screen Resolution
+            gl::Uniform2f(2, system.recommended_render_target_size().0 as f32, system.recommended_render_target_size().1 as f32); //Screen Resolution
             gl::Uniform3f(3, 0.0, 0.0, 0.0); //Camera Position
             gl::Uniform1f(4, elapsed.as_secs() as f32 + (elapsed.subsec_millis() as f32 / 1_000f32)); //Time
+
+            let eye_pos: [[f32; 4]; 4] = f_4x3to4x4(system.eye_to_head_transform(openvr::Eye::Right));
+            gl::UniformMatrix4fv(5, 1, false as u8, eye_pos.as_ptr() as *const f32);
 
             gl::BindVertexArray(empty_vao);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
         }
 
-        let tex: openvr::compositor::Texture = openvr::compositor::Texture {
-            handle: openvr::compositor::texture::Handle::OpenGLTexture(rendered_texture as usize),
-            color_space: openvr::compositor::texture::ColorSpace::Auto
-        };
+        unsafe {
+            gl::BindFramebuffer(gl::FRAMEBUFFER, framebuffer_name_right_eye);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
+        shader_program.set_used();
+        unsafe {
+            gl::Uniform2f(2, system.recommended_render_target_size().0 as f32, system.recommended_render_target_size().1 as f32); //Screen Resolution
+            gl::Uniform3f(3, 0.0, 0.0, 0.0); //Camera Position
+            gl::Uniform1f(4, elapsed.as_secs() as f32 + (elapsed.subsec_millis() as f32 / 1_000f32)); //Time
+
+            let eye_pos: [[f32; 4]; 4] = f_4x3to4x4(system.eye_to_head_transform(openvr::Eye::Left));
+            gl::UniformMatrix4fv(5, 1, false as u8, eye_pos.as_ptr() as *const f32);
+
+            gl::BindVertexArray(empty_vao);
+            gl::DrawArrays(gl::TRIANGLES, 0, 3);
+        }
 
         let abs_hmd = *pos[0].device_to_absolute_tracking();
         unsafe {
-            match comp.submit(openvr::Eye::Left, &tex, None, Some(abs_hmd)) {
+            match comp.submit(openvr::Eye::Left, &tex_left_eye, None, Some(abs_hmd)) {
                 Ok(sys) => sys,
                 Err(err) => {
                     println!("Drawing Left Eye Failed: {}", err);
                     return;
                 }
             }
-            match comp.submit(openvr::Eye::Right, &tex, None, Some(abs_hmd)) {
+            match comp.submit(openvr::Eye::Right, &tex_right_eye, None, Some(abs_hmd)) {
                 Ok(sys) => sys,
                 Err(err) => {
                     println!("Drawing Right Eye Failed: {}", err);
@@ -173,4 +201,9 @@ fn main() {
         }
         window.gl_swap_window();
     }
+}
+
+fn f_4x3to4x4(mat: [[f32; 4]; 3]) -> [[f32; 4]; 4] {
+    let empty_row = [0f32, 0f32, 0f32, 1f32];
+    return [mat[0], mat[1], mat[2], empty_row];
 }
