@@ -1,6 +1,7 @@
 extern crate gl;
 extern crate sdl2;
 extern crate openvr;
+//extern crate cgmath;
 
 use std::time::Instant;
 
@@ -24,6 +25,8 @@ fn main() {
         }
     };
 
+
+
     let comp = match context.compositor() {
         Ok(ext) => ext,
         Err(err) => {
@@ -32,8 +35,16 @@ fn main() {
         }
     };
 
-    println!("Left Eye Matrix: {:?}", system.eye_to_head_transform(openvr::Eye::Left));
-    println!("Left Eye Matrix: {:?}", system.eye_to_head_transform(openvr::Eye::Right));
+    let mut r_proj_raw: openvr::system::RawProjection = system.projection_raw(openvr::Eye::Right);
+    let r_proj_prop = [r_proj_raw.left, r_proj_raw.right, r_proj_raw.bottom, r_proj_raw.top];
+    r_proj_raw = system.projection_raw(openvr::Eye::Left);
+    let l_proj_prop = [r_proj_raw.left, r_proj_raw.right, r_proj_raw.bottom, r_proj_raw.top];
+
+    println!("Right Eye Prop: {:?}", r_proj_prop);
+    println!("Light Eye Prop: {:?}", l_proj_prop);
+
+    println!("Right Eye Matrix: {:?}", system.eye_to_head_transform(openvr::Eye::Right)[0][3]);
+    println!("Left Eye Matrix: {:?}", system.eye_to_head_transform(openvr::Eye::Left)[0][3]);
     println!("\tRecommended size: {:?}", system.recommended_render_target_size());
     println!("\tVsync: {:?}", system.time_since_last_vsync());
 
@@ -140,14 +151,20 @@ fn main() {
             }
         }
 
-        let pos = system.device_to_absolute_tracking_pose(openvr::TrackingUniverseOrigin::RawAndUncalibrated, 0.0);
+        let pos = system.device_to_absolute_tracking_pose(openvr::TrackingUniverseOrigin::Standing, 0.0);
+        let hmd_wr_pos = *pos[0].device_to_absolute_tracking();
+        let mut hmd_pos: [[f32; 4]; 4] = [[hmd_wr_pos[0][0], hmd_wr_pos[1][0], hmd_wr_pos[2][0], 0f32],
+                                          [hmd_wr_pos[0][1], hmd_wr_pos[1][1], hmd_wr_pos[2][1], 0f32],
+                                          [hmd_wr_pos[0][2], hmd_wr_pos[1][2], hmd_wr_pos[2][2], 0f32],
+                                          [hmd_wr_pos[0][3], hmd_wr_pos[1][3], hmd_wr_pos[2][3], 1f32]];
 
         loop {
-            match system.poll_next_event_with_pose(openvr::TrackingUniverseOrigin::RawAndUncalibrated) {
+            match system.poll_next_event_with_pose(openvr::TrackingUniverseOrigin::Standing) {
                 None => break,
                 Some(x) => x,
             };
         }
+
 
 
         unsafe {
@@ -162,6 +179,9 @@ fn main() {
 
             let eye_pos: f32 = (system.eye_to_head_transform(openvr::Eye::Left))[0][3];
             gl::Uniform1f(5, eye_pos);
+
+            gl::Uniform4f(6, l_proj_prop[0], l_proj_prop[1], l_proj_prop[2], l_proj_prop[3]);
+            gl::UniformMatrix4fv(7, 1, gl::FALSE, std::mem::transmute(&hmd_pos));
 
             gl::BindVertexArray(empty_vao);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
@@ -179,6 +199,9 @@ fn main() {
 
             let eye_pos: f32 = (system.eye_to_head_transform(openvr::Eye::Right))[0][3];
             gl::Uniform1f(5, eye_pos);
+
+            gl::Uniform4f(6, r_proj_prop[0], r_proj_prop[1], r_proj_prop[2], r_proj_prop[3]);
+            gl::UniformMatrix4fv(7, 1, gl::FALSE, std::mem::transmute(&hmd_pos));
 
             gl::BindVertexArray(empty_vao);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
