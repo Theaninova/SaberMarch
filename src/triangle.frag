@@ -222,7 +222,7 @@ vec3 patInfinite(vec3 p, vec3 o) {
 }
 
 float sceneSDF(vec3 p) {
-    return boxSDF(translate(vec3(sin(time), 0.0, 0.0), rotateZ(sin(time), p)), vec3(1.0, 0.5, 0.5));
+    return boxSDF(translate(vec3(sin(/*time*/1.0), 0.0, 0.0), rotateZ(sin(/*time*/1.0), p)), vec3(1.0, 0.5, 0.5));
 }
 
 vec3 estimateNormal(vec3 p) {
@@ -248,49 +248,11 @@ float shortestDistanceToSurface(vec3 eye, vec3 marchingDirection, float start, f
     return end;
 }
 
-vec3 rayDirection(float fieldOfView, vec2 s, vec2 fragCoord) {
-    //Left Half Angle, Right Half Angle, Top Half Angle, Bottom Half Angle
-    /*vec3 o_v = vec3(0.0, 0.0, 0.0);
-    float rx = resolution.x / 2.0;
-    float rz = resolution.y / 2.0;
-
-    if (gl_FragCoord.x <= rx) { //pfLeft
-        o_v.x = (rx - gl_FragCoord.x / rx) * (projection[0]);
-    } else { //pfRight
-        o_v.x = (gl_FragCoord.x - rx) / rx * (projection[1]);
-    }
-
-    if (gl_FragCoord.y <= rz) { //pfLeft
-        o_v.z = (rz - gl_FragCoord.y / rz) * (projection[3]);
-    } else { //pfRigh
-        o_v.z = (gl_FragCoord.y - rz) / rz * (projection[2]);
-    }*/
-
-    vec2 relative = (gl_FragCoord.xy * 2 / resolution) - 1;
-    float tx = abs(projection[0]) + abs(projection[1]);
-    /*if (relative.x > 0)
-        tx = abs(projection[0]);
-    else
-        tx = abs(projection[1]);*/
-    float ty = abs(projection[2]) + abs(projection[3]);
-    /*if (relative.y > 0)
-        ty = abs(projection[2]);
-    else
-        ty = abs(projection[3]);*/
-
-    return normalize(vec3(
-        relative.x * tx,
-        relative.y * ty,
-        -1.0
-    ));
-
-    //vec2 xy = fragCoord - s / 2.0;
-    //float z = s.y / tan(radians(fieldOfView) / 2.0);
-    //return normalize(o_v/*vec3(xy, -z)*/);
+vec3 rayDirection() {
+    return normalize(vec3(projection.xw + gl_FragCoord.xy * ((abs(projection.xw) + abs(projection.yz)) / resolution.xy), -1.0));
 }
 
-vec3 phongContribForLight(vec3 k_d, vec3 k_s, float alpha, vec3 p, vec3 eye,
-                          vec3 lightPos, vec3 lightIntensity) {
+vec3 phongContribForLight(vec3 k_d, vec3 k_s, float alpha, vec3 p, vec3 eye, vec3 lightPos, vec3 lightIntensity) {
     vec3 N = estimateNormal(p);
     vec3 L = normalize(lightPos - p);
     vec3 V = normalize(eye - p);
@@ -351,9 +313,8 @@ vec3 phongIllumination(vec3 k_a, vec3 k_d, vec3 k_s, float alpha, vec3 p, vec3 e
 
 void main()
 {
-	vec3 dir = rayDirection(45.0, resolution/*vec2(900, 700)*/, gl_FragCoord.xy);
-    vec3 eye = (vec4(eye_x, 0, 5.0, 1.0) * transform_pos).xyz;
-    //vec3 worldDir = (proj_matrix * vec4(1, 1, 1, 0)).xyz;
+	vec3 dir = (vec4(rayDirection(), 1.0)/*/ * inverse(transform_pos)*/).xyz;
+    vec3 eye = (vec4(eye_x, 0, 5.0, 1.0)/* * transform_pos*/).xyz;
 
     float dist = shortestDistanceToSurface(eye, dir, MIN_DIST, MAX_DIST);
 
