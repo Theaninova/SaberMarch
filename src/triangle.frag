@@ -7,7 +7,10 @@ layout(location = 3) uniform vec3 cam_pos;
 layout(location = 4) uniform float time;
 layout(location = 5) uniform float eye_x;
 layout(location = 6) uniform vec4 projection; //Left Half Angle, Right Half Angle, Top Half Angle, Bottom Half Angle
-layout(location = 7) uniform mat4 transform_pos;
+//layout(location = 7) uniform mat4 transform_pos;
+
+layout(location = 8) uniform vec3 hmd_pos;
+layout(location = 9) uniform mat4 hmd_rot;
 
 const int MAX_MARCHING_STEPS = 255;
 const float MIN_DIST = 0.0;
@@ -222,7 +225,8 @@ vec3 patInfinite(vec3 p, vec3 o) {
 }
 
 float sceneSDF(vec3 p) {
-    return boxSDF(translate(vec3(sin(/*time*/1.0), 0.0, 0.0), rotateZ(sin(/*time*/1.0), p)), vec3(1.0, 0.5, 0.5));
+    //return boxSDF(translate(vec3(sin(/*time*/1.0), 0.0, 0.0), rotateZ(sin(/*time*/1.0), p)), vec3(1.0, 0.5, 0.5));
+    return sphereSDF(p, 0.1);
 }
 
 vec3 estimateNormal(vec3 p) {
@@ -313,8 +317,8 @@ vec3 phongIllumination(vec3 k_a, vec3 k_d, vec3 k_s, float alpha, vec3 p, vec3 e
 
 void main()
 {
-	vec3 dir = (vec4(rayDirection(), 1.0)/*/ * inverse(transform_pos)*/).xyz;
-    vec3 eye = (vec4(eye_x, 0, 5.0, 1.0)/* * transform_pos*/).xyz;
+	vec3 dir = normalize((vec4(rayDirection(), 1.0) * inverse(hmd_rot)).xyz);
+    vec3 eye = vec3(hmd_pos[0], hmd_pos[1] - 1, 1 + hmd_pos[2]) + (vec4(eye_x, 0.0, 0.0, 0.0) * inverse(hmd_rot)).xyz;
 
     float dist = shortestDistanceToSurface(eye, dir, MIN_DIST, MAX_DIST);
 

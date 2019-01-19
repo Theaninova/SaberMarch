@@ -151,12 +151,11 @@ fn main() {
             }
         }
 
+
         let pos = system.device_to_absolute_tracking_pose(openvr::TrackingUniverseOrigin::Standing, 0.0);
         let hmd_wr_pos = *pos[0].device_to_absolute_tracking();
-        let mut hmd_pos: [[f32; 4]; 4] = [[hmd_wr_pos[0][0], hmd_wr_pos[1][0], hmd_wr_pos[2][0], 0f32],
-                                          [hmd_wr_pos[0][1], hmd_wr_pos[1][1], hmd_wr_pos[2][1], 0f32],
-                                          [hmd_wr_pos[0][2], hmd_wr_pos[1][2], hmd_wr_pos[2][2], 0f32],
-                                          [hmd_wr_pos[0][3], hmd_wr_pos[1][3], hmd_wr_pos[2][3], 1f32]];
+        let hmd_pos = get_tracking_position(hmd_wr_pos);
+        let hmd_rot = get_tracking_rotation(hmd_wr_pos);
 
         loop {
             match system.poll_next_event_with_pose(openvr::TrackingUniverseOrigin::Standing) {
@@ -181,7 +180,10 @@ fn main() {
             gl::Uniform1f(5, eye_pos);
 
             gl::Uniform4f(6, l_proj_prop[0], l_proj_prop[1], l_proj_prop[2], l_proj_prop[3]);
-            gl::UniformMatrix4fv(7, 1, gl::FALSE, std::mem::transmute(&hmd_pos));
+            //gl::UniformMatrix4fv(7, 1, gl::FALSE, std::mem::transmute(&hmd_pos));
+
+            gl::Uniform3f(8, hmd_pos[0], hmd_pos[1], hmd_pos[2]);
+            gl::UniformMatrix4fv(9, 1, gl::FALSE, std::mem::transmute(&hmd_rot));
 
             gl::BindVertexArray(empty_vao);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
@@ -201,7 +203,10 @@ fn main() {
             gl::Uniform1f(5, eye_pos);
 
             gl::Uniform4f(6, r_proj_prop[0], r_proj_prop[1], r_proj_prop[2], r_proj_prop[3]);
-            gl::UniformMatrix4fv(7, 1, gl::FALSE, std::mem::transmute(&hmd_pos));
+            //gl::UniformMatrix4fv(7, 1, gl::FALSE, std::mem::transmute(&hmd_pos));
+
+            gl::Uniform3f(8, hmd_pos[0], hmd_pos[1], hmd_pos[2]);
+            gl::UniformMatrix4fv(9, 1, gl::FALSE, std::mem::transmute(&hmd_rot));
 
             gl::BindVertexArray(empty_vao);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
@@ -228,7 +233,48 @@ fn main() {
     }
 }
 
-fn f_4x3to4x4(mat: [[f32; 4]; 3]) -> [[f32; 4]; 4] {
+fn get_tracking_rotation(mat: [[f32; 4]; 3]) -> [[f32; 4]; 4] {
+    /*return [
+        (1f32 + mat[0][0] + mat[1][1] + mat[2][2]).max(0f32).sqrt() / 2f32,
+
+        copysign((1f32 + mat[0][0] - mat[1][1] - mat[2][2]).max(0f32).sqrt() / 2f32, mat[2][1] - mat[1][2]),
+        copysign((1f32 - mat[0][0] + mat[1][1] - mat[2][2]).max(0f32).sqrt() / 2f32, mat[0][2] - mat[2][0]),
+        copysign((1f32 - mat[0][0] - mat[1][1] + mat[2][2]).max(0f32).sqrt() / 2f32, mat[1][0] - mat[0][1])
+    ];*/
+
+    let sx = (mat[0][0].powi(2) + mat[1][0].powi(2) + mat[2][0].powi(2)).sqrt();
+    let sy = (mat[0][1].powi(2) + mat[1][1].powi(2) + mat[2][1].powi(2)).sqrt();
+    let sz = (mat[0][2].powi(2) + mat[1][2].powi(2) + mat[2][2].powi(2)).sqrt();
+
+    return [
+        [mat[0][0] / sx, mat[1][0] / sy, mat[2][0], 0f32],
+        [mat[0][1] / sx, mat[1][1] / sy, mat[2][1], 0f32],
+        [mat[0][2] / sx, mat[1][2] / sy, mat[2][2], 0f32],
+        [0f32,           0f32,           0f32,      1f32]
+    ];
+}
+
+fn get_tracking_position(mat: [[f32; 4]; 3]) -> [f32; 3] {
+    return [
+        mat[0][3],
+        mat[1][3],
+        mat[2][3]
+    ];
+}
+
+/*fn get_tracking_yrp(mat: [[f32; 4]; 3]) -> [f32; 3] {
+
+}*/
+
+fn copysign(to: f32, from: f32) -> f32 {
+    if (from < 0f32 && to < 0f32) || (from >= 0f32 && to >= 0f32) {
+        return to;
+    } else {
+        return -to;
+    }
+}
+
+/*fn f_4x3to4x4(mat: [[f32; 4]; 3]) -> [[f32; 4]; 4] {
     let empty_row = [0f32, 0f32, 0f32, 1f32];
     return [mat[0], mat[1], mat[2], empty_row];
-}
+}*/
