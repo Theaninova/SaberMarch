@@ -226,7 +226,9 @@ vec3 patInfinite(vec3 p, vec3 o) {
 
 float sceneSDF(vec3 p) {
     //return boxSDF(translate(vec3(sin(/*time*/1.0), 0.0, 0.0), rotateZ(sin(/*time*/1.0), p)), vec3(1.0, 0.5, 0.5));
-    return sphereSDF(p, 0.1);
+    return opSmoothUnion(
+        sphereSDF(patInfinite(p, vec3(4.0, 4.0, 4.0)), 0.1),
+        sphereSDF(translate(patInfinite(p, vec3(4.0, 4.0, 4.0)), vec3(sin(time * 0.5), 0.0, 0.0)), 0.1), 0.3);
 }
 
 vec3 estimateNormal(vec3 p) {

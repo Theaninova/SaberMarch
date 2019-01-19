@@ -16,7 +16,6 @@ fn main() {
         }
     };
     print!("OpenVR was initialized Successfully.");
-
     let system = match context.system() {
         Ok(sys) => sys,
         Err(err) => {
@@ -24,9 +23,6 @@ fn main() {
             return;
         }
     };
-
-
-
     let comp = match context.compositor() {
         Ok(ext) => ext,
         Err(err) => {
@@ -47,6 +43,8 @@ fn main() {
     println!("Left Eye Matrix: {:?}", system.eye_to_head_transform(openvr::Eye::Left)[0][3]);
     println!("\tRecommended size: {:?}", system.recommended_render_target_size());
     println!("\tVsync: {:?}", system.time_since_last_vsync());
+
+    //let display_freq = system.
 
     let sdl = sdl2::init().unwrap();
     let video_subsystem = sdl.video().unwrap();
@@ -126,8 +124,10 @@ fn main() {
         gl::GenVertexArrays(1, &mut empty_vao);
     }
 
-    let last_time = Instant::now();
-
+    let begin = Instant::now();
+    let mut last_frame_time = Instant::now();
+    let mut frame_time = last_frame_time.elapsed();
+    let mut frame_time_s = frame_time.as_secs() as f32 + (frame_time.subsec_millis() as f32 / 1_000f32);
     //-----------------------------------------------------------------
 
 
@@ -142,7 +142,9 @@ fn main() {
             }
         };
 
-        let elapsed = last_time.elapsed();
+        last_frame_time = Instant::now();
+
+        let elapsed = begin.elapsed();
 
         for event in event_pump.poll_iter() {
             match event {
@@ -152,7 +154,7 @@ fn main() {
         }
 
 
-        let pos = system.device_to_absolute_tracking_pose(openvr::TrackingUniverseOrigin::Standing, 0.0);
+        let pos = system.device_to_absolute_tracking_pose(openvr::TrackingUniverseOrigin::Standing, system.time_since_last_vsync().unwrap().0);
         let hmd_wr_pos = *pos[0].device_to_absolute_tracking();
         let hmd_pos = get_tracking_position(hmd_wr_pos);
         let hmd_rot = get_tracking_rotation(hmd_wr_pos);
@@ -212,6 +214,10 @@ fn main() {
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
         }
 
+        frame_time = last_frame_time.elapsed();
+        frame_time_s = frame_time.as_secs() as f32 + (frame_time.subsec_millis() as f32 / 1_000f32);
+        println!("Frametime: {:?}", frame_time_s);
+
         let abs_hmd = *pos[0].device_to_absolute_tracking();
         unsafe {
             match comp.submit(openvr::Eye::Left, &tex_left_eye, None, Some(abs_hmd)) {
@@ -234,17 +240,9 @@ fn main() {
 }
 
 fn get_tracking_rotation(mat: [[f32; 4]; 3]) -> [[f32; 4]; 4] {
-    /*return [
-        (1f32 + mat[0][0] + mat[1][1] + mat[2][2]).max(0f32).sqrt() / 2f32,
-
-        copysign((1f32 + mat[0][0] - mat[1][1] - mat[2][2]).max(0f32).sqrt() / 2f32, mat[2][1] - mat[1][2]),
-        copysign((1f32 - mat[0][0] + mat[1][1] - mat[2][2]).max(0f32).sqrt() / 2f32, mat[0][2] - mat[2][0]),
-        copysign((1f32 - mat[0][0] - mat[1][1] + mat[2][2]).max(0f32).sqrt() / 2f32, mat[1][0] - mat[0][1])
-    ];*/
-
     let sx = (mat[0][0].powi(2) + mat[1][0].powi(2) + mat[2][0].powi(2)).sqrt();
     let sy = (mat[0][1].powi(2) + mat[1][1].powi(2) + mat[2][1].powi(2)).sqrt();
-    let sz = (mat[0][2].powi(2) + mat[1][2].powi(2) + mat[2][2].powi(2)).sqrt();
+    //let sz = (mat[0][2].powi(2) + mat[1][2].powi(2) + mat[2][2].powi(2)).sqrt();
 
     return [
         [mat[0][0] / sx, mat[1][0] / sy, mat[2][0], 0f32],
@@ -266,13 +264,13 @@ fn get_tracking_position(mat: [[f32; 4]; 3]) -> [f32; 3] {
 
 }*/
 
-fn copysign(to: f32, from: f32) -> f32 {
+/*fn copysign(to: f32, from: f32) -> f32 {
     if (from < 0f32 && to < 0f32) || (from >= 0f32 && to >= 0f32) {
         return to;
     } else {
         return -to;
     }
-}
+}*/
 
 /*fn f_4x3to4x4(mat: [[f32; 4]; 3]) -> [[f32; 4]; 4] {
     let empty_row = [0f32, 0f32, 0f32, 1f32];
