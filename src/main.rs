@@ -127,7 +127,7 @@ fn main() {
     let begin = Instant::now();
     let mut last_frame_time = Instant::now();
     let mut frame_time = last_frame_time.elapsed();
-    let mut frame_time_s = frame_time.as_secs() as f32 + (frame_time.subsec_millis() as f32 / 1_000f32);
+    let mut frame_time_s =  1f64 / (frame_time.as_secs() as f64 + (frame_time.subsec_millis() as f64 / 1_000f64));
     //-----------------------------------------------------------------
 
 
@@ -154,7 +154,7 @@ fn main() {
         }
 
 
-        let pos = system.device_to_absolute_tracking_pose(openvr::TrackingUniverseOrigin::Standing, system.time_since_last_vsync().unwrap().0);
+        let pos = system.device_to_absolute_tracking_pose(openvr::TrackingUniverseOrigin::Standing, system.time_since_last_vsync().unwrap().0 + 1f32/90f32);
         let hmd_wr_pos = *pos[0].device_to_absolute_tracking();
         let hmd_pos = get_tracking_position(hmd_wr_pos);
         let hmd_rot = get_tracking_rotation(hmd_wr_pos);
@@ -214,9 +214,6 @@ fn main() {
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
         }
 
-        frame_time = last_frame_time.elapsed();
-        frame_time_s = frame_time.as_secs() as f32 + (frame_time.subsec_millis() as f32 / 1_000f32);
-        println!("Frametime: {:?}", frame_time_s);
 
         let abs_hmd = *pos[0].device_to_absolute_tracking();
         unsafe {
@@ -235,6 +232,13 @@ fn main() {
                 }
             }
         }
+
+        frame_time = last_frame_time.elapsed();
+        frame_time_s = 1f64 / (frame_time.as_secs() as f64 + (frame_time.subsec_millis() as f64 / 1_000f64));
+        if frame_time_s < 100.0 {
+            println!("Warning, low FPS: {:?}", frame_time_s);
+        }
+
         window.gl_swap_window();
     }
 }

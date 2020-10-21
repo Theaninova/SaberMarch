@@ -145,6 +145,24 @@ float quadSDF(vec3 p, vec3 a, vec3 b, vec3 c, vec3 d) {
      :
      dot(nor,pa)*dot(nor,pa)/dot2_3(nor) );
 }
+float madelbulbSDF(vec3 w) {
+    // extract polar coordinates
+      float wr = sqrt(dot(w,w));
+      float wo = acos(w.y/wr);
+      float wi = atan(w.x,w.z);
+
+      // scale and rotate the point
+      wr = pow( wr, 8.0 );
+      wo = wo * 8.0;
+      wi = wi * 8.0;
+
+      // convert back to cartesian coordinates
+      w.x = wr * sin(wo)*sin(wi);
+      w.y = wr * cos(wo);
+      w.z = wr * sin(wo)*cos(wi);
+
+      return length(w);
+}
 //Operators
 /*vec4 opElongate(vec3 p, vec3 h) {
     //Not sure how to implement this
@@ -152,8 +170,8 @@ float quadSDF(vec3 p, vec3 a, vec3 b, vec3 c, vec3 d) {
     vec3 q = abs(p)-h;
     return vec4(min(max(q.x, max(q.y, q.z)), 0.0), max(q, 0.0));
 }*/
-vec4 opRound(vec3 p, float r) {
-    return vec4(p, r);
+float opRound(float p, float r) {
+    return p - r;
 }
 float opOnion(float sdf_result, float thickness) {
     return abs(sdf_result) - thickness;
@@ -225,10 +243,12 @@ vec3 patInfinite(vec3 p, vec3 o) {
 }
 
 float sceneSDF(vec3 p) {
-    //return boxSDF(translate(vec3(sin(/*time*/1.0), 0.0, 0.0), rotateZ(sin(/*time*/1.0), p)), vec3(1.0, 0.5, 0.5));
-    return opSmoothUnion(
-        sphereSDF(patInfinite(p, vec3(4.0, 4.0, 4.0)), 0.1),
-        sphereSDF(translate(patInfinite(p, vec3(4.0, 4.0, 4.0)), vec3(sin(time * 0.5), 0.0, 0.0)), 0.1), 0.3);
+    return opRound(boxSDF(translate(vec3(sin(/*time*/1.0), 0.0, 0.0), rotateZ(sin(/*time*/1.0), p)), vec3(1.0, 0.5, 0.5)), 0.4);
+    //return opUnion(
+        //boxSDF(translate(p, vec3(0.0, 1.0, 15.0)), vec3(1.5, 0.1, 10.0)),
+        //boxSDF(translate(p, vec3(0.0, 1.0, -1.0)), vec3(1.0, 0.1, 1.0))
+    //);
+    //return madelbulbSDF(p);
 }
 
 vec3 estimateNormal(vec3 p) {
@@ -326,15 +346,15 @@ void main()
 
     if (dist > MAX_DIST - EPSILON) {
         // Didn't hit anything
-        Color = vec3(0.0, 0.0, 0.0);
+        Color = vec3(0.1, 0.1, 0.1);
 		return;
     }
 
     // The closest point on the surface to the eyepoint along the view ray
     vec3 p = eye + dist * dir;
 
-    vec3 K_a = vec3(0.2, 0.2, 0.2);
-    vec3 K_d = vec3(0.7, 0.2, 0.2);
+    vec3 K_a = vec3(0.2, 0.2, 0.21);
+    vec3 K_d = vec3(0.7, 0.7, 0.7);
     vec3 K_s = vec3(1.0, 1.0, 1.0);
     float shininess = 10.0;
 
